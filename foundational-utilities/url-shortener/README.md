@@ -35,49 +35,28 @@ To design the right storage and caching layer, we must calculate the scale.
 * **Daily Requests:** $4,000 \text{ RPS} \times 86,400 \text{ sec} \approx 345 \text{ Million requests/day}$.
 * **Cache Size:** $0.2 \times 345M \times 500 \text{ bytes} \approx 34 \text{ GB of RAM}$ for caching.
 
-### System Flow Diagram
-```mermaid
-graph TD
-    %% Define Styles
-    classDef client fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef traffic fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef app fill:#dfd,stroke:#333,stroke-width:2px;
-    classDef data fill:#ffd,stroke:#333,stroke-width:2px;
+## 🏗️ 3. High-Level Design (HLD)
 
-    User[User/Client]:::client
-    LB[Load Balancer]:::traffic
-    WS[Web Servers / API Service]:::app
-    KGS[Key Generation Service]:::app
-    Cache[(Redis Cache)]:::data
-    DB[(NoSQL/SQL Database)]:::data
+The system is designed to handle a read-heavy workload by decoupling the **Write Path** (URL Generation) from the **Read Path** (Redirection). 
 
-    %% Write Flow (Creating a link)
-    User -->|1. Long URL| LB
-    LB --> WS
-    WS -->|2. Request Key| KGS
-    KGS -.->|3. Unused Key| WS
-    WS -->|4. Save Mapping| DB
-    WS -->|5. Push to Cache| Cache
-    WS -->|6. Short URL| User
+![System Architecture](./assets/architecture-v1.svg)
 
-    %% Read Flow (Clicking a link)
-    User -.->|7. Click Short Link| LB
-    LB -.-> WS
-    WS -.->|8. Check Cache| Cache
-    Cache -.->|9. Cache Miss| WS
-    WS -.->|10. Query DB| DB
-    DB -.->|11. Long URL| WS
-    WS -.->|12. Update Cache| Cache
-    WS -.->|13. HTTP 301 Redirect| User
-```
+### 🧱 Component Breakdown
+
+* **Load Balancer (Nginx/AWS ELB):** Acts as the entry point. It distributes incoming traffic to multiple web servers using a *Least Connections* strategy to ensure no single server is overwhelmed during traffic spikes.
+* **Web Servers (API Tier):** Stateless servers that handle the core logic. 
+    * **Write:** Grabs a pre-allocated key from the KGS, stores the mapping, and updates the cache.
+    * **Read:** Queries the cache first, falling back to the DB only on a cache miss.
+* **Key Generation Service (KGS):** A dedicated microservice that pre-generates unique 7-character keys (Base62). 
+    * *The "Why":* This eliminates runtime collisions and prevents the database from becoming a bottleneck during URL creation.
+* **Cache (Redis):** Stores the most frequently accessed `short_url -> long_url` mappings. Based on the **Pareto Principle (80/20 rule)**, caching 20% of traffic can handle 80% of our requests, keeping redirection latency under 20ms.
+* **Database (NoSQL/SQL):** The source of truth. At this scale, we optimize for high-availability and horizontal scaling. (See Phase 4 for the DB selection deep dive).
 
 ---
 
-
-
 ## 🗓️ Progress
-- [x] Day 1: Requirements Gathering
-- [ ] Day 2: High-Level Architecture (Hashing vs. Key Generation Service)
-- [ ] Day 3: Database Schema & Storage Estimates
-- [ ] Day 4: Caching & Redirection Flow
-- [ ] Day 5: PoC Implementation
+- [x] Step 1: Requirements Gathering
+- [x] Step 2: Traffic & Storage Estimation
+- [x] Step 3: High-Level Design & Excalidraw Architecture
+- [ ] Step 4: Database Schema & Deep Dive (SQL vs NoSQL)
+- [ ] Step 5: Proof of Concept Implementation (Python/Go)
