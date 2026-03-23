@@ -35,24 +35,21 @@ To design the right storage and caching layer, we must calculate the scale.
 * **Daily Requests:** $4,000 \text{ RPS} \times 86,400 \text{ sec} \approx 345 \text{ Million requests/day}$.
 * **Cache Size:** $0.2 \times 345M \times 500 \text{ bytes} \approx 34 \text{ GB of RAM}$ for caching.
 
+### System Flow Diagram
+```mermaid
 graph TD
-    subgraph Client_Layer
-        User[User/Client]
-    end
+    %% Define Styles
+    classDef client fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef traffic fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef app fill:#dfd,stroke:#333,stroke-width:2px;
+    classDef data fill:#ffd,stroke:#333,stroke-width:2px;
 
-    subgraph Traffic_Management
-        LB[Load Balancer]
-    end
-
-    subgraph Application_Tier
-        WS[Web Servers / API Service]
-        KGS[Key Generation Service]
-    end
-
-    subgraph Data_Tier
-        Cache[(Redis Cache)]
-        DB[(NoSQL/SQL Database)]
-    end
+    User[User/Client]:::client
+    LB[Load Balancer]:::traffic
+    WS[Web Servers / API Service]:::app
+    KGS[Key Generation Service]:::app
+    Cache[(Redis Cache)]:::data
+    DB[(NoSQL/SQL Database)]:::data
 
     %% Write Flow
     User -->|1. Request Short URL| LB
@@ -68,8 +65,12 @@ graph TD
     WS -.->|7. Check Cache| Cache
     Cache -.->|8. If Miss: Query DB| DB
     WS -.->|9. HTTP 301 Redirect| User
-    
+```
+
 ---
+
+
+
 ## 🗓️ Progress
 - [x] Day 1: Requirements Gathering
 - [ ] Day 2: High-Level Architecture (Hashing vs. Key Generation Service)
