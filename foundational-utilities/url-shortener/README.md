@@ -35,7 +35,40 @@ To design the right storage and caching layer, we must calculate the scale.
 * **Daily Requests:** $4,000 \text{ RPS} \times 86,400 \text{ sec} \approx 345 \text{ Million requests/day}$.
 * **Cache Size:** $0.2 \times 345M \times 500 \text{ bytes} \approx 34 \text{ GB of RAM}$ for caching.
 
+graph TD
+    subgraph Client_Layer
+        User[User/Client]
+    end
 
+    subgraph Traffic_Management
+        LB[Load Balancer]
+    end
+
+    subgraph Application_Tier
+        WS[Web Servers / API Service]
+        KGS[Key Generation Service]
+    end
+
+    subgraph Data_Tier
+        Cache[(Redis Cache)]
+        DB[(NoSQL/SQL Database)]
+    end
+
+    %% Write Flow
+    User -->|1. Request Short URL| LB
+    LB --> WS
+    WS -->|2. Get Unique Key| KGS
+    WS -->|3. Store Mapping| DB
+    WS -->|4. Update Cache| Cache
+    WS -->|5. Return Short URL| User
+
+    %% Read Flow
+    User -.->|6. Access Short URL| LB
+    LB -.-> WS
+    WS -.->|7. Check Cache| Cache
+    Cache -.->|8. If Miss: Query DB| DB
+    WS -.->|9. HTTP 301 Redirect| User
+    
 ---
 ## 🗓️ Progress
 - [x] Day 1: Requirements Gathering
