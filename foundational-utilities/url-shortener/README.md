@@ -51,20 +51,24 @@ graph TD
     Cache[(Redis Cache)]:::data
     DB[(NoSQL/SQL Database)]:::data
 
-    %% Write Flow
-    User -->|1. Request Short URL| LB
+    %% Write Flow (Creating a link)
+    User -->|1. Long URL| LB
     LB --> WS
-    WS -->|2. Get Unique Key| KGS
-    WS -->|3. Store Mapping| DB
-    WS -->|4. Update Cache| Cache
-    WS -->|5. Return Short URL| User
+    WS -->|2. Request Key| KGS
+    KGS -.->|3. Unused Key| WS
+    WS -->|4. Save Mapping| DB
+    WS -->|5. Push to Cache| Cache
+    WS -->|6. Short URL| User
 
-    %% Read Flow
-    User -.->|6. Access Short URL| LB
+    %% Read Flow (Clicking a link)
+    User -.->|7. Click Short Link| LB
     LB -.-> WS
-    WS -.->|7. Check Cache| Cache
-    Cache -.->|8. If Miss: Query DB| DB
-    WS -.->|9. HTTP 301 Redirect| User
+    WS -.->|8. Check Cache| Cache
+    Cache -.->|9. Cache Miss| WS
+    WS -.->|10. Query DB| DB
+    DB -.->|11. Long URL| WS
+    WS -.->|12. Update Cache| Cache
+    WS -.->|13. HTTP 301 Redirect| User
 ```
 
 ---
