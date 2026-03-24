@@ -84,11 +84,67 @@ We will use **Hash-Based Sharding** on the `short_key`.
 1. **ACID Compliance:** Ensures that a custom alias is never assigned to two different people simultaneously.
 2. **Relational Power:** If we later want to add complex user features (billing, teams, folders), Postgres handles relations much better than Cassandra or DynamoDB.
 3. **Maturity:** Excellent tooling for backups, replicas, and monitoring.
+
+
 ---
 
-## 🗓️ Progress
+## � 5. Implementation Blueprint (Spring Boot SOP)
+
+For the Proof of Concept (PoC), we use Spring Boot 3.x with Java 21. The application follows a Layered Architecture to ensure separation of concerns, high performance, and testability.
+
+### 🛠️ Technical Stack
+
+| Component | Technology | Reasoning |
+| :--- | :--- | :--- |
+| **Framework** | Spring Boot 3.x | Industry standard for microservices and rapid PoC. |
+| **Language** | Java 21 | Utilizing Virtual Threads (Project Loom) for high-concurrency performance. |
+| **Database** | PostgreSQL | Primary store for ACID compliance and indexed lookups. |
+| **Caching** | Redis | Sidecar cache to ensure sub-20ms redirects for popular links. |
+| **Build Tool** | Maven/Gradle | Standard dependency management. |
+
+### 📂 Project Structure (The "SOP" Layout)
+
+We organize the codebase by technical layer to maintain a clean, navigable structure:
+
+```plaintext
+src/main/java/com/architect/urlshortener/
+├── controller/      # REST Endpoints (Request/Response handling)
+├── service/         # Business Logic (Base62 conversion, KGS interaction)
+├── repository/      # Database Abstraction (JPA/Hibernate)
+├── model/           # Entity Definitions (Database Schema)
+├── dto/             # Data Transfer Objects (API Contracts)
+├── util/            # Base62 & Hashing Utilities
+└── exception/       # Global Exception Handling & Custom Errors
+```
+
+### 🛣️ API Endpoints
+
+| Method | Endpoint | Description | Status Code |
+| :--- | :--- | :--- | :--- |
+| POST | `/api/v1/urls` | Shorten a long URL (JSON Body) | 201 Created |
+| GET | `/{shortKey}` | Redirect to the original long URL | 301 Moved |
+| GET | `/api/v1/stats/{key}` | Retrieve click analytics (Optional) | 200 OK |
+
+### 🧩 Core Logic: The Base62 Strategy
+
+We avoid using standard Base64 because it contains `+` and `/` characters, which are not URL-safe without additional encoding. Base62 `[0-9, a-z, A-Z]` is perfectly safe for URLs and provides $62^7$ (over 3.5 Trillion) unique combinations.
+
+**The Algorithm Flow:**
+1. **Receive:** The user submits a Long URL.
+2. **ID Fetch:** The Service fetches a unique `BIGINT` ID from a PostgreSQL Sequence (simulating a Key Generation Service).
+3. **Encode:** The ID (e.g., 200921) is converted to a Base62 string (e.g., `zn9`).
+4. **Persistence:** The mapping is saved to PostgreSQL and asynchronously pushed to the Redis cache.
+5. **Response:** The user receives the shortened link.
+
+> [!TIP]
+> **Pro-Tip:** Using Java 21 Virtual Threads allows our Web Servers to handle thousands of concurrent redirection requests without the memory overhead of traditional platform threads.
+
+---
+
+## �🗓️ Progress
 - [x] Step 1: Requirements Gathering
 - [x] Step 2: Traffic & Storage Estimation
 - [x] Step 3: High-Level Design & Excalidraw Architecture
 - [x] Step 4: Database Schema & Deep Dive (SQL vs NoSQL)
-- [ ] Step 5: Proof of Concept Implementation (Spring Boot)
+- [x] Step 5: Implementation Blueprint (SOP)
+- [ ] Step 6: Proof of Concept Implementation (Spring Boot)
