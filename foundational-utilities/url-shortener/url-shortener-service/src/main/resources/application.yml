@@ -8,6 +8,10 @@ spring:
   application:
     name: url-shortener-service
 
+  threads:
+    virtual:
+      enabled: true
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/url_shortener}
     username: ${DB_USERNAME:postgres}

@@ -88,7 +88,7 @@ We will use **Hash-Based Sharding** on the `short_key`.
 
 ---
 
-## � 5. Implementation Blueprint (Spring Boot SOP)
+## 🚀 5. Implementation Blueprint (Spring Boot SOP)
 
 For the Proof of Concept (PoC), we use Spring Boot 3.x with Java 21. The application follows a Layered Architecture to ensure separation of concerns, high performance, and testability.
 
@@ -141,10 +141,77 @@ We avoid using standard Base64 because it contains `+` and `/` characters, which
 
 ---
 
-## �🗓️ Progress
+## � 6. Final Implementation & Walkthrough
+
+The implementation phase is complete. This service is built for high-scale redirection using Java 21 Virtual Threads, ensuring that the system can handle thousands of concurrent connections with minimal memory overhead.
+
+### 🏗️ Technical Highlights
+* **Virtual Threading:** Enabled via `spring.threads.virtual.enabled: true`. This allows the application to handle the high-concurrency "Read Path" (4,000+ RPS) without thread-pool exhaustion.
+* **The "Sequence First" Strategy:** To maintain a `NOT NULL` constraint on the `shortKey` while using a DB-generated ID for Base62 encoding, the service manually fetches the next sequence value from PostgreSQL before persisting the entity.
+* **Sidecar Caching:** Every "Read" request checks Redis first. On a cache miss, the DB is queried, and the result is back-filled into Redis with a TTL, ensuring sub-20ms latency for 80% of traffic.
+
+### 🧪 Verification Results (Integration Testing)
+
+#### 1. URL Shortening (Write Path)
+**Request:**
+```bash
+curl -i -X POST http://localhost:8080/api/v1/urls \
+-H "Content-Type: application/json" \
+-d '{"longUrl": "https://www.google.com"}'
+```
+**Response (201 Created):**
+```json
+{
+  "shortUrl": "http://localhost:8080/8",
+  "originalUrl": "https://www.google.com",
+  "expiresAt": "2028-03-23T16:52:32.482759"
+}
+```
+
+#### 2. Redirection (Read Path)
+**Request:**
+```bash
+curl -i http://localhost:8080/8
+```
+**Response (301 Moved Permanently):**
+```http
+HTTP/1.1 301 
+Location: https://www.google.com
+Content-Length: 0
+```
+> [!NOTE]
+> We use 301 Redirection to allow browser-side caching, further reducing server load.
+
+### 🛠️ How to Run Locally
+
+#### Prerequisites
+* Docker & Docker Compose
+* JDK 21
+
+**Step 1: Spin up Infrastructure**
+Launch the PostgreSQL and Redis containers:
+```bash
+docker compose up -d
+```
+
+**Step 2: Run the Application**
+```bash
+./mvnw spring-boot:run
+```
+
+**Step 3: Monitoring (Optional)**
+You can connect to Redis to see the cached mappings:
+```bash
+docker exec -it url-shortener-cache redis-cli
+KEYS *
+```
+
+---
+
+## 🗓️ Final Progress Tracker
 - [x] Step 1: Requirements Gathering
 - [x] Step 2: Traffic & Storage Estimation
 - [x] Step 3: High-Level Design & Excalidraw Architecture
 - [x] Step 4: Database Schema & Deep Dive (SQL vs NoSQL)
 - [x] Step 5: Implementation Blueprint (SOP)
-- [ ] Step 6: Proof of Concept Implementation (Spring Boot)
+- [x] Step 6: Final Implementation & Walkthrough 🏁
