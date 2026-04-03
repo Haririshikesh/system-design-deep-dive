@@ -110,10 +110,56 @@ src/main/resources/
 
 ---
 
+## 🚀 6. Final Implementation & Walkthrough
+
+The Rate Limiter Service implementation has been finalized using Spring Cloud Gateway and Redis with Lua scripts.
+
+### 🏗️ Technical Highlights & GoF Patterns
+- **Virtual Threads Integration:** Employs Java 21 Virtual Threads (`spring.threads.virtual.enabled: true`) over Spring WebFlux for maximum throughput with minimal machine overhead.
+- **Atomic Concurrency Resolution:** To combat the distributed "Read-Modify-Write" race condition, bucket calculation natively evaluates using the atomic `token_bucket.lua` script embedded in Redis.
+- **GoF Strategy Pattern:** To ensure seamless scalability to new algorithms, the codebase implements the **Strategy Pattern**. A `RateLimitStrategy` interface handles core evaluation, whereas `TokenBucketStrategy` operates as the functional concrete layer. This decouples the `GlobalFilter` framework entirely from the underlying mathematical evaluation, paving the way easily for future integrations like a "LeakyBucketStrategy".
+
+### 🧪 Integration Testing Output
+Triggering burst limits successfully results dynamically terminating with:
+```http
+HTTP/1.1 429 Too Many Requests
+X-RateLimit-Retry-After: 1
+```
+Successful requests correctly propagate limits upstream:
+```http
+HTTP/1.1 200 OK
+X-RateLimit-Remaining: 4
+```
+
+### 🛠️ How to Run Locally
+
+#### Prerequisites
+* Docker & Docker Compose
+* JDK 21
+* Maven
+
+**Step 1: Spin up Infrastructure (Redis)**
+Navigate to `rate-limiter-service`:
+```bash
+docker-compose up -d
+```
+
+**Step 2: Run the Gateway API**
+```bash
+mvn spring-boot:run
+```
+
+**Step 3: Verification Script**
+```bash
+for i in {1..7}; do curl -i http://localhost:8080/api/get; echo ""; done
+```
+
+---
+
 ## 🗓️ Progress Tracker
 - [x] **Step 1:** Requirements Gathering
 - [x] **Step 2:** High-Level Architecture & Placement Strategy
 - [x] **Step 3:** Algorithm Comparison & Selection
-- [ ] **Step 4:** Handling Distributed Systems (Redis & Race Conditions)
-- [ ] **Step 5:** Proof of Concept Implementation (Spring Cloud Gateway)
-- [ ] **Step 6:** Final Implementation & Walkthrough
+- [x] **Step 4:** Handling Distributed Systems (Redis & Race Conditions)
+- [x] **Step 5:** Implementation Blueprint (Spring Cloud Gateway SOP)
+- [x] **Step 6:** Final Implementation & Walkthrough 🏁
