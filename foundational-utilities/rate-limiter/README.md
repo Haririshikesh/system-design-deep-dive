@@ -108,7 +108,7 @@ src/main/resources/
 ├── application.yml     # Route & Filter definitions
 └── scripts/            # rate_limiter.lua (The Atomic Script)
 
----
+```
 
 ## 🚀 6. Final Implementation & Walkthrough
 
