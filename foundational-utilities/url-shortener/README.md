@@ -150,6 +150,10 @@ The implementation phase is complete. This service is built for high-scale redir
 * **The "Sequence First" Strategy:** To maintain a `NOT NULL` constraint on the `shortKey` while using a DB-generated ID for Base62 encoding, the service manually fetches the next sequence value from PostgreSQL before persisting the entity.
 * **Sidecar Caching:** Every "Read" request checks Redis first. On a cache miss, the DB is queried, and the result is back-filled into Redis with a TTL, ensuring sub-20ms latency for 80% of traffic.
 
+#### 🎯 GoF Design Patterns Used
+* **Builder Pattern:** Used extensively via Lombok's `@Builder` when creating `UrlMapping` domain entities and `UrlResponseDto` objects. **Why?** It prevents the "Telescoping Constructor Anti-Pattern" and provides a clean, fluid API to construct complex immutable objects—making the code far more readable when dealing with multiple sequential fields like `shortKey`, `originalUrl`, and timestamps.
+* **Singleton Pattern:** Leveraged natively via Spring's `@Service` and `@Configuration` mechanisms for the `UrlShortenerService` and `AppConfig`. **Why?** Business services in this application are strictly stateless. Using singletons prevents the garbage collector from being overwhelmed by rapidly creating and destroying service instances for the thousands of concurrent requests happening every second.
+
 ### 🧪 Verification Results (Integration Testing)
 
 #### 1. URL Shortening (Write Path)

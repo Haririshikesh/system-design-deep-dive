@@ -117,7 +117,12 @@ The Rate Limiter Service implementation has been finalized using Spring Cloud Ga
 ### 🏗️ Technical Highlights & GoF Patterns
 - **Virtual Threads Integration:** Employs Java 21 Virtual Threads (`spring.threads.virtual.enabled: true`) over Spring WebFlux for maximum throughput with minimal machine overhead.
 - **Atomic Concurrency Resolution:** To combat the distributed "Read-Modify-Write" race condition, bucket calculation natively evaluates using the atomic `token_bucket.lua` script embedded in Redis.
-- **GoF Strategy Pattern:** To ensure seamless scalability to new algorithms, the codebase implements the **Strategy Pattern**. A `RateLimitStrategy` interface handles core evaluation, whereas `TokenBucketStrategy` operates as the functional concrete layer. This decouples the `GlobalFilter` framework entirely from the underlying mathematical evaluation, paving the way easily for future integrations like a "LeakyBucketStrategy".
+
+#### 🎯 GoF Design Patterns Used
+- **Strategy Pattern:** Implemented at the core of the rate-limiting functionality. The application exposes a generic `RateLimitStrategy` interface, and currently utilizes a concrete `TokenBucketStrategy`.
+  - **Why?** Rate limiting logic frequently changes depending on scale and abuse patterns. By using the Strategy Pattern, we physically decouple the `RateLimitGatewayFilterFactory` from the mathematical evaluation of the limit. If we ever need to switch to a "Leaky Bucket" or "Sliding Window" algorithm, we can simply define a new strategy bean to inject, strictly honoring the **Open-Closed Principle (OCP)** without modifying existing infrastructure.
+- **Factory Method Pattern:** Implemented intrinsically via Spring's `AbstractGatewayFilterFactory`. 
+  - **Why?** It handles the instantiation and configuration of Gateway Filters dynamically at startup based on the specific route arguments defined in the `application.yml`, allowing for decoupled and highly scalable route management.
 
 ### 🧪 Integration Testing Output
 Triggering burst limits successfully results dynamically terminating with:
