@@ -7,6 +7,11 @@ import com.architect.notification.strategy.factory.StrategyFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.annotation.DltHandler;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -20,11 +25,19 @@ public class NotificationWorker {
     private final StrategyFactory strategyFactory;
     private final RedisTemplate<String, Object> redisTemplate;
 
+    @RetryableTopic(
+            attempts = "5",
+            backoff = @Backoff(delay = 2000, multiplier = 2.0)
+    )
     @KafkaListener(topics = KafkaConfig.HIGH_PRIORITY_TOPIC, groupId = "notification-group")
     public void processHighPriorityEvent(NotificationEvent event) {
         processEvent(event, "HIGH_PRIORITY_TOPIC");
     }
 
+    @RetryableTopic(
+            attempts = "5",
+            backoff = @Backoff(delay = 2000, multiplier = 2.0)
+    )
     @KafkaListener(topics = KafkaConfig.BULK_TOPIC, groupId = "notification-group")
     public void processBulkEvent(NotificationEvent event) {
         processEvent(event, "BULK_TOPIC");
@@ -52,7 +65,14 @@ public class NotificationWorker {
             
         } catch (Exception e) {
             log.error("Failed to process event [{}]", event.getTrackingId(), e);
-            throw new RuntimeException("Requeue message", e); // Will be handled by Spring AMQP retry/DLQ
+            throw new RuntimeException("Requeue message", e); // Will be handled by Spring Kafka retry/DLQ
         }
+    }
+
+    @DltHandler // Dead Letter Topic
+    public void processDltMessage(NotificationEvent event, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("DLT Received! Poison pill message: Topic=[{}] Tracking ID=[{}] Payload channel=[{}]", 
+                  topic, event.getTrackingId(), event.getChannel());
+        //Update DB state to "FAILED" here.
     }
 }

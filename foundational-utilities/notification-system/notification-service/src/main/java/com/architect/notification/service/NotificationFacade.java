@@ -21,7 +21,7 @@ public class NotificationFacade {
 
     public NotificationResponse dispatch(NotificationRequest request) {
         String trackingId = "ntf_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-        
+        //eg. ntf_a1b2c3d4e5f6
         NotificationEvent event = NotificationEvent.builder()
                 .trackingId(trackingId)
                 .userId(request.getUserId())

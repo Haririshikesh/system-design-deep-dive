@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  id-generator-1:
+    build: .
+    ports:
+      - "8083:8083"
+    environment:
+      - WORKER_ID=1
+      - DATACENTER_ID=1
+    depends_on:
+      - zookeeper
+
+  id-generator-2:
+    build: .
+    ports:
+      - "8084:8083"
+    environment:
+      - WORKER_ID=2
+      - DATACENTER_ID=1
+    depends_on:
+      - zookeeper
