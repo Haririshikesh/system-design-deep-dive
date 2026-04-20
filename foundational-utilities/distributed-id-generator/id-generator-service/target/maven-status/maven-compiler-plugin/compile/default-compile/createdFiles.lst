@@ -1,4 +1,0 @@
-com/architect/idgen/service/IdGeneratorService.class
-com/architect/idgen/api/IdController.class
-com/architect/idgen/core/SnowflakeGenerator.class
-com/architect/idgen/IdGeneratorApplication.class
